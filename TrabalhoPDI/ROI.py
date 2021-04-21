@@ -25,22 +25,12 @@ def click_and_crop(event, x, y, flags, param):
 		cv2.rectangle(image, refPt[0], refPt[1], (255, 0, 0), 2)
 		cv2.imshow("image", image)
 
-
-def resizeImage(image, scale):
-	scale_percent = scale
-	width = int(image.shape[1] * scale_percent / 100)
-	height = int(image.shape[0] * scale_percent / 100)
-	dim = (width, height)
-	resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-	print('Resized Dimensions : ',resized.shape)
-	return resized
-
 def getRoi(filepath):
 	global image
 	global clone
 	image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
 	clone = image.copy()
-	cv2.namedWindow("image", cv2.WINDOW_NORMAL)
+	cv2.namedWindow("image", cv2.WINDOW_AUTOSIZE)
 	cv2.setMouseCallback("image", click_and_crop)
 	# keep looping until the 'q' key is pressed
 	while True:
@@ -57,15 +47,5 @@ def getRoi(filepath):
 	# from the image and display it
 	if len(refPt) == 2:
 		roi = clone[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]	
-
-		cv2.imshow("Roi", roi)
-		path = _save_file_dialogs()
-		if path != None:
-			result=cv2.imwrite(path, roi)
-			if result==True:
-				print("Arquivo salvo")
-			else:
-				print("Erro ao salvar a imagem")
-		cv2.waitKey(0)
-	# close all open windows
-	cv2.destroyAllWindows()
+		return roi
+		

@@ -25,10 +25,16 @@
     <Compile Include="main.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ZoomAlt2.py">
+    <Compile Include="Equalization.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ZoomAlt.py">
+    <Compile Include="Quantization.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="ResizeRegion.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Zoom.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Save.py">
@@ -37,7 +43,7 @@
     <Compile Include="ROI.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Zoom.py" />
+    <Compile Include="ZoomAlt.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|PythonCore|3.8" />
