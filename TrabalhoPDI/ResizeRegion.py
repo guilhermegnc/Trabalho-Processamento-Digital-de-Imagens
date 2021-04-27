@@ -8,6 +8,6 @@ def resizeImage(image, scale):
 	height = int(image.shape[0] * scale_percent / 100)
 	dim = (width, height)
 	resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
-	print('Resized Dimensions : ',resized.shape)
+	print('Dimensões redimensionadas : ',resized.shape)
 	return resized
 	

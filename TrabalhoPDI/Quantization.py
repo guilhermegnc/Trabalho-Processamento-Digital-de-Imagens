@@ -6,16 +6,16 @@ from sklearn.cluster import KMeans
 from sklearn.utils import shuffle
 
 def quantize(image_raw, levels):
-    if len(image_raw.shape) > 2:
-        gray2D = cv2.cvtColor(image_raw, cv2.COLOR_BGR2GRAY)
-        gray_raw = cv2.cvtColor(gray2D, cv2.COLOR_GRAY2BGR) # 3 channels
+    if len(image_raw.shape) > 2: # Se tiver 3 canais
+        gray2D = cv2.cvtColor(image_raw, cv2.COLOR_BGR2GRAY) # Grayscale 2 canais
+        gray_raw = cv2.cvtColor(gray2D, cv2.COLOR_GRAY2BGR) # 3 canais
     else:
-        gray_raw = cv2.cvtColor(image_raw, cv2.COLOR_GRAY2BGR) # 3 channels
+        gray_raw = cv2.cvtColor(image_raw, cv2.COLOR_GRAY2BGR) # 3 canais
     
-    if (levels > 0) and (levels < 255):
+    if (levels > 0) and (levels < 255): # Tons de cinza
         levels = levels - 1
     else:
-        print("levels needs to be a positive value, and smaller than the 255")
+        print("Quantidade de tons precisa ser positiva e maior que 255")
 
     image = np.array(gray_raw, dtype=np.float64) / 255
     h, w, d = image.shape

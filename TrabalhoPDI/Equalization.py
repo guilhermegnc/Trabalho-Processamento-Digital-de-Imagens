@@ -18,20 +18,20 @@ def __plotHistograms__(image_raw, image_eq, cdf_orig, cdf_eq):
     plt.title("Histograma imagem equalizada")
 
 def equalize(image_raw, type):
-    if len(image_raw.shape) > 2:
+    if len(image_raw.shape) > 2: # Se tiver 3 canais
        gray2D = cv2.cvtColor(image_raw, cv2.COLOR_BGR2GRAY)
     else:
        gray2D = image_raw
 
     if type == 'numpy':
-        hist, bins = np.histogram(image_raw.flatten(),256,[0,256])
+        hist, bins = np.histogram(image_raw.flatten(),256,[0,256]) #Imagem fica em uma dimensão
 
-        cdf = hist.cumsum()
-        cdf_normalized = cdf * hist.max()/ cdf.max()
+        cdf = hist.cumsum() # Soma cumulativa sobre um eixo
+        cdf_normalized = cdf * hist.max() / cdf.max()
 
-        cdf_m = np.ma.masked_equal(cdf,0)
+        cdf_m = np.ma.masked_equal(cdf,0) # Aplica uma mascara no vetor quando a condição for satisfeita
         cdf_m = (cdf_m - cdf_m.min())*255/(cdf_m.max()-cdf_m.min())
-        cdf = np.ma.filled(cdf_m,0).astype('uint8')
+        cdf = np.ma.filled(cdf_m,0).astype('uint8') # Fill onde a mascara foi aplicada
 
         image2 = cdf[image_raw]
 

@@ -6,7 +6,7 @@ from tkinter import ttk
 from PIL import Image, ImageTk
 
 class AutoScrollbar(ttk.Scrollbar):
-    """ A scrollbar that hides itself if it's not needed. Works only for grid geometry manager """
+    # Uma barra de scroll que se esconde se não for necessária
     def set(self, lo, hi):
         if float(lo) <= 0.0 and float(hi) >= 1.0:
             self.grid_remove()
@@ -15,180 +15,172 @@ class AutoScrollbar(ttk.Scrollbar):
             ttk.Scrollbar.set(self, lo, hi)
 
     def pack(self, **kw):
-        raise tk.TclError('Cannot use pack with the widget ' + self.__class__.__name__)
+        raise tk.TclError('Não é possível usar pack com o Widget ' + self.__class__.__name__)
 
     def place(self, **kw):
-        raise tk.TclError('Cannot use place with the widget ' + self.__class__.__name__)
+        raise tk.TclError('Não é possível usar place com o Widget ' + self.__class__.__name__)
 
 class CanvasImage:
-    """ Display and zoom image """
-    def __init__(self, placeholder, path, image=None, flag=False):
-        """ Initialize the ImageFrame """
-        self.imscale = 1.0  # scale for the canvas image zoom, public for outer classes
-        self.__delta = 1.3  # zoom magnitude
-        self.__filter = Image.ANTIALIAS  # could be: NEAREST, BILINEAR, BICUBIC and ANTIALIAS
-        self.__previous_state = 0  # previous state of the keyboard
-        self.path = path  # path to the image, should be public for outer classes
-        # Create ImageFrame in placeholder widget
-        self.__imframe = ttk.Frame(placeholder)  # placeholder of the ImageFrame object
-        # Vertical and horizontal scrollbars for canvas
+    # Mostra a imagem e o zoom da imagem
+    def __init__(self, root, path, image=None, flag=False):
+        # Inicializa o frame
+        self.imscale = 1.0  # Escala prom zoom na imagem
+        self.__delta = 1.3  # Magnitude do zoom
+        self.__filter = Image.ANTIALIAS
+        self.__previous_state = 0  # Ultimo estado do teclado
+        self.path = path
+        # Cria o frame na root
+        self.__imframe = ttk.Frame(root)  # root
+        # Scrollbar vertical e horizontal
         hbar = AutoScrollbar(self.__imframe, orient='horizontal')
         vbar = AutoScrollbar(self.__imframe, orient='vertical')
         hbar.grid(row=1, column=0, sticky='we')
         vbar.grid(row=0, column=1, sticky='ns')
-        # Create canvas and bind it with scrollbars. Public for outer classes
+        # Cria o canvas e coloca a scrollbar nele
         self.canvas = tk.Canvas(self.__imframe, highlightthickness=0,
                                 xscrollcommand=hbar.set, yscrollcommand=vbar.set)
         self.canvas.grid(row=0, column=0, sticky='nswe')
-        self.canvas.update()  # wait till canvas is created
-        hbar.configure(command=self.__scroll_x)  # bind scrollbars to the canvas
+        self.canvas.update()  # Espera o canvas ser criado
+        hbar.configure(command=self.__scroll_x)  # Coloca a scrollbar
         vbar.configure(command=self.__scroll_y)
-        # Bind events to the Canvas
-        self.canvas.bind('<Configure>', lambda event: self.__show_image())  # canvas is resized
-        self.canvas.bind('<ButtonPress-1>', self.__move_from)  # remember canvas position
-        self.canvas.bind('<B1-Motion>',     self.__move_to)  # move canvas to the new position
-        self.canvas.bind('<MouseWheel>', self.__wheel)  # zoom for Windows
-        # Handle keystrokes in idle mode, because program slows down on a weak computers,
-        # when too many key stroke events in the same time
-        self.canvas.bind('<Key>', lambda event: self.canvas.after_idle(self.__keystroke, event))
-        # Decide if this image huge or not
-        self.__huge = False  # huge or not
-        self.__huge_size = 14000  # define size of the huge image
-        self.__band_width = 1024  # width of the tile band
-        Image.MAX_IMAGE_PIXELS = 1000000000  # suppress DecompressionBombError for the big image
-        with warnings.catch_warnings():  # suppress DecompressionBombWarning
+        self.canvas.bind('<Configure>', lambda event: self.__show_image())  # Canvas é redimensionado
+        self.canvas.bind('<ButtonPress-1>', self.__move_from)  # Lembra da posição do cursor
+        self.canvas.bind('<B1-Motion>',     self.__move_to)  # Move para a nova posição
+        self.canvas.bind('<MouseWheel>', self.__wheel)  # Zoom
+
+        # Vê se a imagem é muito grande
+        self.__huge = False 
+        self.__huge_size = 14000  # Define o tamanho de uma imagem grande
+        self.__band_width = 1024  # largura do tile
+        Image.MAX_IMAGE_PIXELS = 1000000000  # não mostra o erro DecompressionBombError
+        with warnings.catch_warnings():  # ignora DecompressionBombWarning
             warnings.simplefilter('ignore')
-            self.__image = Image.open(self.path)  # open image, but down't load it
-        self.imwidth, self.imheight = self.__image.size  # public for outer classes
+            self.__image = Image.open(self.path)
+        self.imwidth, self.imheight = self.__image.size  # pega o tamanho
         if self.imwidth * self.imheight > self.__huge_size * self.__huge_size and \
-           self.__image.tile[0][0] == 'raw':  # only raw images could be tiled
-            self.__huge = True  # image is huge
-            self.__offset = self.__image.tile[0][2]  # initial tile offset
-            self.__tile = [self.__image.tile[0][0],  # it have to be 'raw'
-                           [0, 0, self.imwidth, 0],  # tile extent (a rectangle)
+           self.__image.tile[0][0] == 'raw':  # image tem que ser raw
+            self.__huge = True
+            self.__offset = self.__image.tile[0][2]  # Ofsset inicial
+            self.__tile = [self.__image.tile[0][0],
+                           [0, 0, self.imwidth, 0],  # cria um tile (retangulo)
                            self.__offset,
-                           self.__image.tile[0][3]]  # list of arguments to the decoder
-        self.__min_side = min(self.imwidth, self.imheight)  # get the smaller image side
-        # Create image pyramid
+                           self.__image.tile[0][3]]  # lista de argumento pro decoder
+        self.__min_side = min(self.imwidth, self.imheight)  # pega o menor lado
+        # Cria uma piramide para a imagem
         self.__pyramid = [self.smaller()] if self.__huge else [Image.open(self.path)]
-        # Set ratio coefficient for image pyramid
+        # Seta o coeficiente da piramide
         self.__ratio = max(self.imwidth, self.imheight) / self.__huge_size if self.__huge else 1.0
-        self.__curr_img = 0  # current image from the pyramid
-        self.__scale = self.imscale * self.__ratio  # image pyramide scale
-        self.__reduction = 2  # reduction degree of image pyramid
+        self.__curr_img = 0  # Imagem atual da piramide
+        self.__scale = self.imscale * self.__ratio  # Escala da imagem
+        self.__reduction = 2  # Reduz o grau da imagem
         w, h = self.__pyramid[-1].size
-        while w > 512 and h > 512:  # top pyramid image is around 512 pixels in size
-            w /= self.__reduction  # divide on reduction degree
-            h /= self.__reduction  # divide on reduction degree
+        while w > 512 and h > 512:  # Imagem no topo da piramide tem 512 pixels
+            w /= self.__reduction  # divide pelo grau de redução
+            h /= self.__reduction  # divide pelo grau de redução
             self.__pyramid.append(self.__pyramid[-1].resize((int(w), int(h)), self.__filter))
-        # Put image into container rectangle and use it to set proper coordinates to the image
+        # Coloca a imagem em um containe e usa para definir as coordenadas da imagem
         self.container = self.canvas.create_rectangle((0, 0, self.imwidth, self.imheight), width=0)
-        self.__show_image()  # show image on the canvas
-        self.canvas.focus_set()  # set focus on the canvas
+        self.__show_image()
+        self.canvas.focus_set()  # Coloca o foco no canvas
 
     def smaller(self):
-        """ Resize image proportionally and return smaller image """
+        # Redimensiona a imagem proporcionalemente e retorna a menor imagem
         w1, h1 = float(self.imwidth), float(self.imheight)
         w2, h2 = float(self.__huge_size), float(self.__huge_size)
         aspect_ratio1 = w1 / h1
-        aspect_ratio2 = w2 / h2  # it equals to 1.0
+        aspect_ratio2 = w2 / h2 # Igual a 1.0
         if aspect_ratio1 == aspect_ratio2:
             image = Image.new('RGB', (int(w2), int(h2)))
-            k = h2 / h1  # compression ratio
-            w = int(w2)  # band length
+            k = h2 / h1  # taxa de compressão
+            w = int(w2)  # comprimento
         elif aspect_ratio1 > aspect_ratio2:
             image = Image.new('RGB', (int(w2), int(w2 / aspect_ratio1)))
-            k = h2 / w1  # compression ratio
-            w = int(w2)  # band length
+            k = h2 / w1  # taxa de compressão
+            w = int(w2)  # comprimento
         else:  # aspect_ratio1 < aspect_ration2
             image = Image.new('RGB', (int(h2 * aspect_ratio1), int(h2)))
-            k = h2 / h1  # compression ratio
-            w = int(h2 * aspect_ratio1)  # band length
+            k = h2 / h1  # taxa de compressão
+            w = int(h2 * aspect_ratio1)  # comprimento
         i, j, n = 0, 1, round(0.5 + self.imheight / self.__band_width)
         while i < self.imheight:
             print('\rOpening image: {j} from {n}'.format(j=j, n=n), end='')
-            band = min(self.__band_width, self.imheight - i)  # width of the tile band
-            self.__tile[1][3] = band  # set band width
-            self.__tile[2] = self.__offset + self.imwidth * i * 3  # tile offset (3 bytes per pixel)
+            band = min(self.__band_width, self.imheight - i)  # Comprimento do tile
+            self.__tile[1][3] = band  # define o comprimento do tile
+            self.__tile[2] = self.__offset + self.imwidth * i * 3  # offset do tile (3 bits por pixel)
             self.__image.close()
-            self.__image = Image.open(self.path)  # reopen / reset image
-            self.__image.size = (self.imwidth, band)  # set size of the tile band
-            self.__image.tile = [self.__tile]  # set tile
-            cropped = self.__image.crop((0, 0, self.imwidth, band))  # crop tile band
+            self.__image = Image.open(self.path)
+            self.__image.size = (self.imwidth, band)  # define o tamanho do tile
+            self.__image.tile = [self.__tile]  # atribui o tile
+            cropped = self.__image.crop((0, 0, self.imwidth, band))  # corta o tile
             image.paste(cropped.resize((w, int(band * k)+1), self.__filter), (0, int(i * k)))
             i += band
             j += 1
-        print('\r' + 30*' ' + '\r', end='')  # hide printed string
+        print('\r' + 30*' ' + '\r', end='')  # Esconde o print
         return image
 
     def redraw_figures(self):
-        """ Dummy function to redraw figures in the children classes """
+        # Função Dummy para redesenhar a figura nas classes filhas
         pass
 
     def grid(self, **kw):
-        """ Put CanvasImage widget on the parent widget """
-        self.__imframe.grid(**kw)  # place CanvasImage widget on the grid
-        self.__imframe.grid(sticky='nswe')  # make frame container sticky
-        self.__imframe.rowconfigure(0, weight=1)  # make canvas expandable
+        self.__imframe.grid(**kw)
+        self.__imframe.grid(sticky='nswe')
+        self.__imframe.rowconfigure(0, weight=1)
         self.__imframe.columnconfigure(0, weight=1)
 
     def pack(self, **kw):
-        """ Exception: cannot use pack with this widget """
-        raise Exception('Cannot use pack with the widget ' + self.__class__.__name__)
+        raise Exception('Não é possível usar o pack com este widget ' + self.__class__.__name__)
 
     def place(self, **kw):
-        """ Exception: cannot use place with this widget """
-        raise Exception('Cannot use place with the widget ' + self.__class__.__name__)
+        raise Exception('Não é possível usar o place com este widget ' + self.__class__.__name__)
 
-    # noinspection PyUnusedLocal
     def __scroll_x(self, *args, **kwargs):
-        """ Scroll canvas horizontally and redraw the image """
-        self.canvas.xview(*args)  # scroll horizontally
-        self.__show_image()  # redraw the image
+        # Scroll horizontalmente e redesenha a imagem
+        self.canvas.xview(*args)  # scroll horizontal
+        self.__show_image()
 
-    # noinspection PyUnusedLocal
     def __scroll_y(self, *args, **kwargs):
-        """ Scroll canvas vertically and redraw the image """
-        self.canvas.yview(*args)  # scroll vertically
-        self.__show_image()  # redraw the image
+         # Scroll verticalmente e redesenha a imagem
+        self.canvas.yview(*args)  # scroll vertical
+        self.__show_image()
 
     def __show_image(self):
-        """ Show image on the Canvas. Implements correct image zoom almost like in Google Maps """
-        box_image = self.canvas.coords(self.container)  # get image area
-        box_canvas = (self.canvas.canvasx(0),  # get visible area of the canvas
+        # Mostra a imagem no canvas
+        box_image = self.canvas.coords(self.container)  # pega a imagem
+        box_canvas = (self.canvas.canvasx(0),  # paga a área visivel do canvas
                       self.canvas.canvasy(0),
                       self.canvas.canvasx(self.canvas.winfo_width()),
                       self.canvas.canvasy(self.canvas.winfo_height()))
-        box_img_int = tuple(map(int, box_image))  # convert to integer or it will not work properly
-        # Get scroll region box
+        box_img_int = tuple(map(int, box_image))  # Converte para int
+        # Pega a região de scroll
         box_scroll = [min(box_img_int[0], box_canvas[0]), min(box_img_int[1], box_canvas[1]),
                       max(box_img_int[2], box_canvas[2]), max(box_img_int[3], box_canvas[3])]
-        # Horizontal part of the image is in the visible area
+        # Parte horizontal da imagem que é visivel
         if  box_scroll[0] == box_canvas[0] and box_scroll[2] == box_canvas[2]:
             box_scroll[0]  = box_img_int[0]
             box_scroll[2]  = box_img_int[2]
-        # Vertical part of the image is in the visible area
+        # Parte vertical da imagem que é visivel
         if  box_scroll[1] == box_canvas[1] and box_scroll[3] == box_canvas[3]:
             box_scroll[1]  = box_img_int[1]
             box_scroll[3]  = box_img_int[3]
-        # Convert scroll region to tuple and to integer
-        self.canvas.configure(scrollregion=tuple(map(int, box_scroll)))  # set scroll region
-        x1 = max(box_canvas[0] - box_image[0], 0)  # get coordinates (x1,y1,x2,y2) of the image tile
+        # Converte a região do scroll em uma tupla e int
+        self.canvas.configure(scrollregion=tuple(map(int, box_scroll)))  # Define a região de scroll
+        x1 = max(box_canvas[0] - box_image[0], 0)  # pega as coordenadas x1, x2, y1, y2
         y1 = max(box_canvas[1] - box_image[1], 0)
         x2 = min(box_canvas[2], box_image[2]) - box_image[0]
         y2 = min(box_canvas[3], box_image[3]) - box_image[1]
-        if int(x2 - x1) > 0 and int(y2 - y1) > 0:  # show image if it in the visible area
-            if self.__huge and self.__curr_img < 0:  # show huge image
-                h = int((y2 - y1) / self.imscale)  # height of the tile band
-                self.__tile[1][3] = h  # set the tile band height
+        if int(x2 - x1) > 0 and int(y2 - y1) > 0:  # Mostra a imagem se ela está na area visivel
+            if self.__huge and self.__curr_img < 0:  # Mostra imagem grane
+                h = int((y2 - y1) / self.imscale)  # altura do tile
+                self.__tile[1][3] = h  # define a altura do tile
                 self.__tile[2] = self.__offset + self.imwidth * int(y1 / self.imscale) * 3
                 self.__image.close()
-                self.__image = Image.open(self.path)  # reopen / reset image
-                self.__image.size = (self.imwidth, h)  # set size of the tile band
+                self.__image = Image.open(self.path)
+                self.__image.size = (self.imwidth, h)  # Define o tamanho do tile
                 self.__image.tile = [self.__tile]
                 image = self.__image.crop((int(x1 / self.imscale), 0, int(x2 / self.imscale), h))
-            else:  # show normal image
-                image = self.__pyramid[max(0, self.__curr_img)].crop(  # crop current img from pyramid
+            else:  # mostra a imagem original
+                image = self.__pyramid[max(0, self.__curr_img)].crop(  # Corta a imagem atual da piramide
                                     (int(x1 / self.__scale), int(y1 / self.__scale),
                                      int(x2 / self.__scale), int(y2 / self.__scale)))
             #
@@ -196,101 +188,77 @@ class CanvasImage:
             imageid = self.canvas.create_image(max(box_canvas[0], box_img_int[0]),
                                                max(box_canvas[1], box_img_int[1]),
                                                anchor='nw', image=imagetk)
-            self.canvas.lower(imageid)  # set image into background
-            self.canvas.imagetk = imagetk  # keep an extra reference to prevent garbage-collection
+            self.canvas.lower(imageid)  # Coloca a imagem no background
+            self.canvas.imagetk = imagetk  # Mantem uma referencia extra para prevenir o garbage-collector
 
     def __move_from(self, event):
-        """ Remember previous coordinates for scrolling with the mouse """
         self.canvas.scan_mark(event.x, event.y)
 
     def __move_to(self, event):
-        """ Drag (move) canvas to the new position """
         self.canvas.scan_dragto(event.x, event.y, gain=1)
-        self.__show_image()  # zoom tile and show it on the canvas
+        self.__show_image()
 
     def outside(self, x, y):
-        """ Checks if the point (x,y) is outside the image area """
-        bbox = self.canvas.coords(self.container)  # get image area
+        # Verifica se o ponto (x, y) está fora da area da imagem
+        bbox = self.canvas.coords(self.container)  # pega a area da imagem
         if bbox[0] < x < bbox[2] and bbox[1] < y < bbox[3]:
-            return False  # point (x,y) is inside the image area
+            return False  # Ponto esta dentro
         else:
-            return True  # point (x,y) is outside the image area
+            return True  # Ponto esta fora
 
     def __wheel(self, event):
-        """ Zoom with mouse wheel """
-        x = self.canvas.canvasx(event.x)  # get coordinates of the event on the canvas
+        x = self.canvas.canvasx(event.x)  # Pega as coordenadas do evento
         y = self.canvas.canvasy(event.y)
-        if self.outside(x, y): return  # zoom only inside image area
+        if self.outside(x, y): return  # Só da zoom dentro da imagem
         scale = 1.0
-        # Respond to Linux (event.num) or Windows (event.delta) wheel event
-        if event.num == 5 or event.delta == -120:  # scroll down, smaller
-            if round(self.__min_side * self.imscale) < 30: return  # image is less than 30 pixels
+        if event.delta == -120:  # Tira zoom
+            if round(self.__min_side * self.imscale) < 30: return  # Image é menor que 30 pixels
             self.imscale /= self.__delta
             scale        /= self.__delta
-        if event.num == 4 or event.delta == 120:  # scroll up, bigger
+        if event.delta == 120:  # Zoom
             i = min(self.canvas.winfo_width(), self.canvas.winfo_height()) >> 1
-            if i < self.imscale: return  # 1 pixel is bigger than the visible area
+            if i < self.imscale: return  # 1 pixel é maior que a area visivel
             self.imscale *= self.__delta
             scale        *= self.__delta
-        # Take appropriate image from the pyramid
-        k = self.imscale * self.__ratio  # temporary coefficient
+        # Pega a imagem apropriada da piramide
+        k = self.imscale * self.__ratio  # Coeficiente temporario
         self.__curr_img = min((-1) * int(math.log(k, self.__reduction)), len(self.__pyramid) - 1)
         self.__scale = k * math.pow(self.__reduction, max(0, self.__curr_img))
         #
-        self.canvas.scale('all', x, y, scale, scale)  # rescale all objects
-        # Redraw some figures before showing image on the screen
-        self.redraw_figures()  # method for child classes
+        self.canvas.scale('all', x, y, scale, scale)  # re-escala todos os objetos
+        # Redesenha algumas imagens antes de mostrar
+        self.redraw_figures()  # metodo para classes filhas
         self.__show_image()
 
-    def __keystroke(self, event):
-        """ Scrolling with the keyboard.
-            Independent from the language of the keyboard, CapsLock, <Ctrl>+<key>, etc. """
-        if event.state - self.__previous_state == 4:  # means that the Control key is pressed
-            pass  # do nothing if Control key is pressed
-        else:
-            self.__previous_state = event.state  # remember the last keystroke state
-            # Up, Down, Left, Right keystrokes
-            if event.keycode in [68, 39, 102]:  # scroll right: keys 'D', 'Right' or 'Numpad-6'
-                self.__scroll_x('scroll',  1, 'unit', event=event)
-            elif event.keycode in [65, 37, 100]:  # scroll left: keys 'A', 'Left' or 'Numpad-4'
-                self.__scroll_x('scroll', -1, 'unit', event=event)
-            elif event.keycode in [87, 38, 104]:  # scroll up: keys 'W', 'Up' or 'Numpad-8'
-                self.__scroll_y('scroll', -1, 'unit', event=event)
-            elif event.keycode in [83, 40, 98]:  # scroll down: keys 'S', 'Down' or 'Numpad-2'
-                self.__scroll_y('scroll',  1, 'unit', event=event)
-
     def crop(self, bbox):
-        """ Crop rectangle from the image and return it """
-        if self.__huge:  # image is huge and not totally in RAM
-            band = bbox[3] - bbox[1]  # width of the tile band
-            self.__tile[1][3] = band  # set the tile height
-            self.__tile[2] = self.__offset + self.imwidth * bbox[1] * 3  # set offset of the band
+        # Corta um retângulo da imagem e o retorna
+        if self.__huge:  # Imagem é muito grande e não está totalmente na RAM
+            band = bbox[3] - bbox[1]  # Comprimento do tile
+            self.__tile[1][3] = band  # Define a altura do tile
+            self.__tile[2] = self.__offset + self.imwidth * bbox[1] * 3  # Atribui o offset do tile
             self.__image.close()
-            self.__image = Image.open(self.path)  # reopen / reset image
-            self.__image.size = (self.imwidth, band)  # set size of the tile band
+            self.__image = Image.open(self.path) 
+            self.__image.size = (self.imwidth, band)  # Coloca o size do tile
             self.__image.tile = [self.__tile]
             return self.__image.crop((bbox[0], 0, bbox[2], band))
-        else:  # image is totally in RAM
+        else:  # Imagem esta na RAM
             return self.__pyramid[0].crop(bbox)
 
     def destroy(self):
-        """ ImageFrame destructor """
+        #Destructor
         self.__image.close()
-        map(lambda i: i.close, self.__pyramid)  # close all pyramid images
-        del self.__pyramid[:]  # delete pyramid list
-        del self.__pyramid  # delete pyramid variable
+        map(lambda i: i.close, self.__pyramid)  # Fecha todas as imagens na pirâmide
+        del self.__pyramid[:]  # Deleta a lista de pirâmides
+        del self.__pyramid  # Deleta a variavel piramide
         self.canvas.destroy()
         self.__imframe.destroy()
 
 class MainWindow(ttk.Frame):
-    """ Main window class """
     def __init__(self, mainframe, path, image = None, flag = False):
-        """ Initialize the main Frame """
+        # Inializa o frame
         ttk.Frame.__init__(self, master=mainframe)
-        #self.master.title('Processamento Digital de Imagens')
-        #self.master.geometry('800x600')  # size of the main window
-        self.master.rowconfigure(0, weight=1)  # make the CanvasImage widget expandable
+        self.master.rowconfigure(0, weight=1)
         self.master.columnconfigure(0, weight=1)
-        canvas = CanvasImage(self.master, path, image, flag)  # create widget
+        canvas = CanvasImage(self.master, path, image, flag)
         canvas.grid(row=0, column=0)  # show widget
 

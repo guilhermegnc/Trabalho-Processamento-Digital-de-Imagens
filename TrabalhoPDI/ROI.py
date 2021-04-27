@@ -1,50 +1,43 @@
-# import the necessary packages
-#import argparse
 import cv2
 import easygui
 import unicodedata
 from Save import _save_file_dialogs
 import os
-# initialize the list of reference points and boolean indicating
-# whether cropping is being performed or not
+# Inicializa a lista com os pontos de referencia
 refPt = []
 
-def click_and_crop(event, x, y, flags, param):
-	# grab references to the global variables
+def makeRectangle(event, x, y, flags, param):
 	global refPt
-	# if the left mouse button was clicked, record the starting
-	# (x, y) coordinates and indicate that cropping is being
-	# performed
+	# Se o botão esquerdo por clicado duas vezes. pega as coordenadas x e y
 	if event == cv2.EVENT_LBUTTONDBLCLK:
+		# 64 é usado para ser a image 128x128
 		x1 = x - 64
 		y1 = y - 64
 		x2 = x + 64
 		y2 = y + 64
 		refPt = [(x1, y1), (x2, y2)]
-		# draw a rectangle around the region of interest
+		# Desenha um retângulo em volta da região de interesse
 		cv2.rectangle(image, refPt[0], refPt[1], (255, 0, 0), 2)
-		cv2.imshow("image", image)
+		cv2.imshow("Região de interesse", image)
 
 def getRoi(filepath):
 	global image
 	global clone
 	image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
 	clone = image.copy()
-	cv2.namedWindow("image", cv2.WINDOW_AUTOSIZE)
-	cv2.setMouseCallback("image", click_and_crop)
-	# keep looping until the 'q' key is pressed
+	cv2.namedWindow("Imagem", cv2.WINDOW_AUTOSIZE)
+	cv2.setMouseCallback("Imagem", makeRectangle)
 	while True:
-		# display the image and wait for a keypress
-		cv2.imshow("image", image)
+		# Mostra a imagem e espera a tecla ser pressionada
+		cv2.imshow("Imagem", image)
 		key = cv2.waitKey(1) & 0xFF
-		# if the 'r' key is pressed, reset the cropping region
+		# Se 'r' for pressionada, reseta a imagem
 		if key == ord("r"):
 			image = clone.copy()
-		# if the 'c' key is pressed, break from the loop
+		# Se 'c' for pressionado, para o loop
 		elif key == ord("c"):
 			break
-	# if there are two reference points, then crop the region of interest
-	# from the image and display it
+	# Se houver mais de dois pontos de referencia, corta a imagem
 	if len(refPt) == 2:
 		roi = clone[refPt[0][1]:refPt[1][1], refPt[0][0]:refPt[1][0]]	
 		return roi

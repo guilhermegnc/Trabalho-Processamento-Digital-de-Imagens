@@ -142,8 +142,9 @@ hasBaseImage = False
 changeZoom = False
 
 master_window = tk.Tk()
+master_window.title("Menu")
 
-# Parent widget for the buttons
+# Widget Pai para os botões
 buttons_frame = tk.Frame(master_window)
 buttons_frame.grid(row=0, column=0, sticky='we')
 
@@ -170,7 +171,7 @@ btn_Quantize.config(width = 11)
 
 
 variable = tk.StringVar(buttons_frame)
-variable.set("Equalização") # default value
+variable.set("Equalização") # Valor default
 
 btn_Equalize = tk.OptionMenu(buttons_frame, variable, "Numpy", "Opencv", "Clahe", command=pathEqualize)
 btn_Equalize.grid(row=0, column=5, padx=(10), pady=10)
@@ -184,7 +185,7 @@ btn_Sair = tk.Button(buttons_frame, text='Sair', command=pathSair)
 btn_Sair.grid(row=0, column=7, padx=(10), pady=10)
 btn_Sair.config(width = 11)
 
-# Group1 Frame ----------------------------------------------------
+# Frame Group1 ----------------------------------------------------
 group1 = tk.LabelFrame(master_window, text="Imagem", padx=5, pady=5)
 group1.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky='ewns')
 
