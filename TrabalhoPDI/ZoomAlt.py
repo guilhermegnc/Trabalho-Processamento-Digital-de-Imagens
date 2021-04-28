@@ -22,13 +22,14 @@ class AutoScrollbar(ttk.Scrollbar):
 
 class CanvasImage:
     # Mostra a imagem e o zoom da imagem
-    def __init__(self, root, path, image=None, flag=False):
+    def __init__(self, root, path):
         # Inicializa o frame
         self.imscale = 1.0  # Escala prom zoom na imagem
         self.__delta = 1.3  # Magnitude do zoom
-        self.__filter = Image.ANTIALIAS
+        self.__filter = Image.NORMAL
         self.__previous_state = 0  # Ultimo estado do teclado
         self.path = path
+        self.root = root
         # Cria o frame na root
         self.__imframe = ttk.Frame(root)  # root
         # Scrollbar vertical e horizontal
@@ -47,6 +48,15 @@ class CanvasImage:
         self.canvas.bind('<ButtonPress-1>', self.__move_from)  # Lembra da posição do cursor
         self.canvas.bind('<B1-Motion>',     self.__move_to)  # Move para a nova posição
         self.canvas.bind('<MouseWheel>', self.__wheel)  # Zoom
+        self.canvas.bind('<Double-Button-1>', self.__Roi)
+        self.canvas.bind('<KeyPress>', self.__keyPressEvent)
+
+        self.__isRoi = False
+        self.x1 = 0
+        self.x2 = 0
+        self.y1 = 0
+        self.y2 = 0
+        self.__rectangle = []
 
         # Vê se a imagem é muito grande
         self.__huge = False 
@@ -78,7 +88,7 @@ class CanvasImage:
             w /= self.__reduction  # divide pelo grau de redução
             h /= self.__reduction  # divide pelo grau de redução
             self.__pyramid.append(self.__pyramid[-1].resize((int(w), int(h)), self.__filter))
-        # Coloca a imagem em um containe e usa para definir as coordenadas da imagem
+        # Coloca a imagem em um container e usa para definir as coordenadas da imagem
         self.container = self.canvas.create_rectangle((0, 0, self.imwidth, self.imheight), width=0)
         self.__show_image()
         self.canvas.focus_set()  # Coloca o foco no canvas
@@ -169,8 +179,9 @@ class CanvasImage:
         y1 = max(box_canvas[1] - box_image[1], 0)
         x2 = min(box_canvas[2], box_image[2]) - box_image[0]
         y2 = min(box_canvas[3], box_image[3]) - box_image[1]
+
         if int(x2 - x1) > 0 and int(y2 - y1) > 0:  # Mostra a imagem se ela está na area visivel
-            if self.__huge and self.__curr_img < 0:  # Mostra imagem grane
+            if self.__huge and self.__curr_img < 0:  # Mostra imagem grande
                 h = int((y2 - y1) / self.imscale)  # altura do tile
                 self.__tile[1][3] = h  # define a altura do tile
                 self.__tile[2] = self.__offset + self.imwidth * int(y1 / self.imscale) * 3
@@ -183,11 +194,11 @@ class CanvasImage:
                 image = self.__pyramid[max(0, self.__curr_img)].crop(  # Corta a imagem atual da piramide
                                     (int(x1 / self.__scale), int(y1 / self.__scale),
                                      int(x2 / self.__scale), int(y2 / self.__scale)))
-            #
+
             imagetk = ImageTk.PhotoImage(image.resize((int(x2 - x1), int(y2 - y1)), self.__filter))
             imageid = self.canvas.create_image(max(box_canvas[0], box_img_int[0]),
-                                               max(box_canvas[1], box_img_int[1]),
-                                               anchor='nw', image=imagetk)
+                                                max(box_canvas[1], box_img_int[1]),
+                                                anchor='nw', image=imagetk)
             self.canvas.lower(imageid)  # Coloca a imagem no background
             self.canvas.imagetk = imagetk  # Mantem uma referencia extra para prevenir o garbage-collector
 
@@ -230,6 +241,30 @@ class CanvasImage:
         self.redraw_figures()  # metodo para classes filhas
         self.__show_image()
 
+    def __Roi(self, event):
+        x = self.canvas.canvasx(event.x)  # Pega as coordenadas do evento
+        y = self.canvas.canvasy(event.y)
+        scale = self.imscale * self.__ratio
+        self.x1 = x - (64 * scale)
+        self.y1 = y - (64 * scale)
+        self.x2 = x + (64 * scale)
+        self.y2 = y + (64 * scale)
+        self.__rectangle.append(self.canvas.create_rectangle(self.x1, self.y1, self.x2, self.y2, outline="blue"))
+        self.canvas.tag_raise(self.__rectangle)
+
+    def __keyPressEvent(self, event):
+        if event.char == 'r' or event.char == 'R':
+            for i in self.__rectangle:
+                self.canvas.delete(i)
+        elif event.char == 'c' or event.char == 'C':
+            for i in self.__rectangle:
+                self.canvas.delete(i)
+
+            image = self.crop((int(self.x1), int(self.y1), int(self.x2), int(self.y2)))
+            image.save('temp.png')
+            self.destroy()
+            canvas = MainWindow(self.root, 'temp.png')
+
     def crop(self, bbox):
         # Corta um retângulo da imagem e o retorna
         if self.__huge:  # Imagem é muito grande e não está totalmente na RAM
@@ -254,11 +289,11 @@ class CanvasImage:
         self.__imframe.destroy()
 
 class MainWindow(ttk.Frame):
-    def __init__(self, mainframe, path, image = None, flag = False):
+    def __init__(self, mainframe, path):
         # Inializa o frame
         ttk.Frame.__init__(self, master=mainframe)
         self.master.rowconfigure(0, weight=1)
         self.master.columnconfigure(0, weight=1)
-        canvas = CanvasImage(self.master, path, image, flag)
+        canvas = CanvasImage(self.master, path)
         canvas.grid(row=0, column=0)  # show widget
 

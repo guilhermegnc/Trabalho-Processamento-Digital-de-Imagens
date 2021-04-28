@@ -2,6 +2,7 @@ import cv2
 import easygui
 import unicodedata
 from Save import _save_file_dialogs
+from ZoomAlt import MainWindow
 import os
 # Inicializa a lista com os pontos de referencia
 refPt = []
@@ -20,10 +21,8 @@ def makeRectangle(event, x, y, flags, param):
 		cv2.rectangle(image, refPt[0], refPt[1], (255, 0, 0), 2)
 		cv2.imshow("Regiao de interesse", image)
 
-def getRoi(filepath):
-	global image
+def getRoi(image, root):
 	global clone
-	image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
 	clone = image.copy()
 	cv2.namedWindow("Regiao de interesse", cv2.WINDOW_AUTOSIZE)
 	cv2.setMouseCallback("Regiao de interesse", makeRectangle)

@@ -60,7 +60,7 @@ def pathResize():
     if not hasBaseImage:
         messagebox.showerror("showerror", "Abra uma região de interesse primeiro")
     else:
-        scale = easygui.enterbox("Qual a escala será aplicada na imagem (tipo int)?")
+        scale = easygui.enterbox("Qual a escala será aplicada na imagem (%)?")
         if scale != None:
             global baseImage
             imageResized = resizeImage(baseImage, int(scale))
@@ -142,7 +142,7 @@ filepath = 'KMabWEXvea4P6QSXqDM6.png'
 baseImage = cv2.imread('KMabWEXvea4P6QSXqDM6.png', cv2.IMREAD_UNCHANGED)
 enteredImage = False
 hasBaseImage = False
-changeZoom = False
+changeZoom = True
 
 master_window = tk.Tk()
 master_window.title("Menu")
@@ -180,12 +180,12 @@ btn_Equalize = tk.OptionMenu(buttons_frame, variable, "Numpy", "Opencv", "Clahe"
 btn_Equalize.grid(row=0, column=5, padx=(10), pady=10)
 btn_Equalize.config(width = 11)
 
-btn_AltZoom = tk.Button(buttons_frame, text='Alternar Zoom', command=pathZoom)
-btn_AltZoom.grid(row=0, column=6, padx=(10), pady=10)
-btn_AltZoom.config(width = 11)
+#btn_AltZoom = tk.Button(buttons_frame, text='Alternar Zoom', command=pathZoom)
+#btn_AltZoom.grid(row=0, column=6, padx=(10), pady=10)
+#btn_AltZoom.config(width = 11)
 
 btn_Sair = tk.Button(buttons_frame, text='Sair', command=pathSair)
-btn_Sair.grid(row=0, column=7, padx=(10), pady=10)
+btn_Sair.grid(row=0, column=6, padx=(10), pady=10)
 btn_Sair.config(width = 11)
 
 # Frame Group1 ----------------------------------------------------
@@ -199,6 +199,7 @@ group1.rowconfigure(0, weight=1)
 group1.columnconfigure(0, weight=1)
 
 # Cria o Canvas da imagem
-Zoom(filepath, group1)
+#Zoom(filepath, group1)
+app = MainWindow(group1, filepath)
 
 master_window.mainloop()
