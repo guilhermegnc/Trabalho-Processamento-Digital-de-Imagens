@@ -18,18 +18,18 @@ def makeRectangle(event, x, y, flags, param):
 		refPt = [(x1, y1), (x2, y2)]
 		# Desenha um retângulo em volta da região de interesse
 		cv2.rectangle(image, refPt[0], refPt[1], (255, 0, 0), 2)
-		cv2.imshow("Região de interesse", image)
+		cv2.imshow("Regiao de interesse", image)
 
 def getRoi(filepath):
 	global image
 	global clone
 	image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
 	clone = image.copy()
-	cv2.namedWindow("Imagem", cv2.WINDOW_AUTOSIZE)
-	cv2.setMouseCallback("Imagem", makeRectangle)
+	cv2.namedWindow("Regiao de interesse", cv2.WINDOW_AUTOSIZE)
+	cv2.setMouseCallback("Regiao de interesse", makeRectangle)
 	while True:
 		# Mostra a imagem e espera a tecla ser pressionada
-		cv2.imshow("Imagem", image)
+		cv2.imshow("Regiao de interesse", image)
 		key = cv2.waitKey(1) & 0xFF
 		# Se 'r' for pressionada, reseta a imagem
 		if key == ord("r"):

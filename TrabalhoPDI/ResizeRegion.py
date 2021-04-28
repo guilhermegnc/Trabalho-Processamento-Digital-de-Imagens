@@ -1,5 +1,4 @@
 import cv2 as cv2
-from Save import _save_file_dialogs
 
 def resizeImage(image, scale):
 	#image = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)

@@ -132,8 +132,11 @@ def pathZoom():
 def pathSair():
     master_window.destroy()
     temp = cv2.imread('temp.png')
-    if temp != None:
-        os.remove('temp.png')
+    try:
+        if temp != None:
+            os.remove('temp.png')
+    except:
+        print('A imagem temporaria não foi apagada')
 
 filepath = 'KMabWEXvea4P6QSXqDM6.png'
 baseImage = cv2.imread('KMabWEXvea4P6QSXqDM6.png', cv2.IMREAD_UNCHANGED)

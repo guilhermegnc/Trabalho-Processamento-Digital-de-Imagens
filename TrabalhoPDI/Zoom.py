@@ -43,19 +43,22 @@ class LoadImage:
     def zoomer(self,event):
         if (event.delta > 0):
             if self.__zoomcycle < 10: self.__zoomcycle += 1 # Maximo de 10 níveis de zoom
-            elif self.__zoomcycle >= 10: self.__zoomcycle = 0
+            elif self.__zoomcycle >= 11: self.__zoomcycle = 10
         elif (event.delta < 0):
             if self.__zoomcycle != 0: self.__zoomcycle -= 1
         self.crop(event)
 
     def crop(self,event):
         if self.__zimg_id: self.__canvas.delete(self.__zimg_id)
-        if (self.__zoomcycle) != 0 and (self.__zoomcycle) < 10:
+        if (self.__zoomcycle) != 0 and (self.__zoomcycle) < 11:
             x,y = event.x - self.__xOffset, event.y - self.__yOffset
-            size = self.__width, self.__height
             factor = self.__height / self.__width
-            n = min(self.__width, self.__height)
-        
+            n = min(self.__width, self.__height) # Tamanho com menor lado
+            if factor == 1.0 and n < 500:
+                size = 500, 500
+            else:
+                size = self.__width, self.__height
+
             tmp = self.__orig_img.crop((x-(n/(self.__zoomcycle + 2)),y-(factor*n/(self.__zoomcycle + 2)),x+(n/(self.__zoomcycle + 2)),y+(factor*n/(self.__zoomcycle + 2))))
             widthTmp, heightTmp = tmp.size
             flag = min(widthTmp, heightTmp)
