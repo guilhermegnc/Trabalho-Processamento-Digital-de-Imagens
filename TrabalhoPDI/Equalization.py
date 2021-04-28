@@ -37,8 +37,8 @@ def equalize(image_raw, type):
 
         hist2, bins2 = np.histogram(image2.flatten(),256,[0,256])
 
-        cdf2 = hist.cumsum()
-        cdf_normalized2 = cdf * hist.max()/ cdf.max()
+        cdf2 = hist2.cumsum()
+        cdf_normalized2 = cdf2 * hist.max() / cdf2.max()
 
         __plotHistograms__(image_raw, image2, cdf_normalized, cdf_normalized2)
         return image2
