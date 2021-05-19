@@ -52,11 +52,16 @@ class CanvasImage:
         self.canvas.bind('<KeyPress>', self.__keyPressEvent)
 
         self.__isRoi = False
+        self.x = 0
+        self.y = 0
         self.x1 = 0
         self.x2 = 0
         self.y1 = 0
         self.y2 = 0
         self.__rectangle = []
+        self.verifica = False
+        self.backup = None
+        self.temp22 = []
 
         # Vê se a imagem é muito grande
         self.__huge = False 
@@ -201,6 +206,7 @@ class CanvasImage:
                                                 anchor='nw', image=imagetk)
             self.canvas.lower(imageid)  # Coloca a imagem no background
             self.canvas.imagetk = imagetk  # Mantem uma referencia extra para prevenir o garbage-collector
+            self.backup = image.resize((int(x2 - x1), int(y2 - y1)))
 
     def __move_from(self, event):
         self.canvas.scan_mark(event.x, event.y)
@@ -236,19 +242,53 @@ class CanvasImage:
         self.__curr_img = min((-1) * int(math.log(k, self.__reduction)), len(self.__pyramid) - 1)
         self.__scale = k * math.pow(self.__reduction, max(0, self.__curr_img))
         #
+
+        self.temp22.append(scale)
         self.canvas.scale('all', x, y, scale, scale)  # re-escala todos os objetos
         # Redesenha algumas imagens antes de mostrar
         self.redraw_figures()  # metodo para classes filhas
         self.__show_image()
-
+    
     def __Roi(self, event):
         x = self.canvas.canvasx(event.x)  # Pega as coordenadas do evento
         y = self.canvas.canvasy(event.y)
+
+        box_image = self.canvas.coords(self.container)  # pega a imagem
+        box_canvas = (self.canvas.canvasx(0),  # paga a área visivel do canvas
+                      self.canvas.canvasy(0),
+                      self.canvas.canvasx(self.canvas.winfo_width()),
+                      self.canvas.canvasy(self.canvas.winfo_height()))
+        x1 = max(box_canvas[0] - box_image[0], 0)  # pega as coordenadas x1, x2, y1, y2
+        y1 = max(box_canvas[1] - box_image[1], 0)
+        x2 = min(box_canvas[2], box_image[2]) - box_image[0]
+        y2 = min(box_canvas[3], box_image[3]) - box_image[1]
+
         scale = self.imscale * self.__ratio
         self.x1 = x - (64 * scale)
         self.y1 = y - (64 * scale)
         self.x2 = x + (64 * scale)
         self.y2 = y + (64 * scale)
+        print("==========")
+        print('x ', x)
+        print('y ', y)
+        print('scale ', scale)
+        print('x1 ', box_image[0])
+        print('x2 ', box_image[2])
+        print('y1 ', box_image[1])
+        print('y2 ', box_image[3])
+        print('box x1 ', box_canvas[0])
+        print('box y1 ', box_canvas[1])
+        print('box x2 ', box_canvas[2])
+        print('box y2 ', box_canvas[3])
+        print('event x ', event.x)
+        print('event y ', event.y)
+        print('winfox ', self.canvas.winfo_width())
+        print('winfoy ', self.canvas.winfo_height())
+        for i in self.temp22:
+            print('scale ', i)
+
+        self.x = (x-box_image[0])/scale
+        self.y = (y-box_image[1])/scale
         self.__rectangle.append(self.canvas.create_rectangle(self.x1, self.y1, self.x2, self.y2, outline="blue"))
         self.canvas.tag_raise(self.__rectangle)
 
@@ -260,8 +300,11 @@ class CanvasImage:
             for i in self.__rectangle:
                 self.canvas.delete(i)
 
-            image = self.crop((int(self.x1), int(self.y1), int(self.x2), int(self.y2)))
+            scale = self.imscale * self.__ratio
+            #Pegar o x, y do canvas pra resolver essa ultima parte
+            image = self.crop((int(self.x-64), int(self.y-64), int(self.x+64), int(self.y+64)))
             image.save('temp.png')
+            self.verifica = True
             self.destroy()
             canvas = MainWindow(self.root, 'temp.png')
 
@@ -277,6 +320,10 @@ class CanvasImage:
             self.__image.tile = [self.__tile]
             return self.__image.crop((bbox[0], 0, bbox[2], band))
         else:  # Imagem esta na RAM
+            print('oi', self.backup)
+            #self.__pyramid[0] = self.backup
+            for i in self.__pyramid:
+                print(i)
             return self.__pyramid[0].crop(bbox)
 
     def destroy(self):
@@ -294,6 +341,6 @@ class MainWindow(ttk.Frame):
         ttk.Frame.__init__(self, master=mainframe)
         self.master.rowconfigure(0, weight=1)
         self.master.columnconfigure(0, weight=1)
-        canvas = CanvasImage(self.master, path)
-        canvas.grid(row=0, column=0)  # show widget
+        self.canvas = CanvasImage(self.master, path)
+        self.canvas.grid(row=0, column=0)  # show widget
 

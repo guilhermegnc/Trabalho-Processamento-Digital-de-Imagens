@@ -28,9 +28,12 @@ def pathImage():
     if not changeZoom:
         Zoom(filepath, group1)
     else:
+        global app
         app = MainWindow(group1, filepath)
 
 def pathSave():
+     global app
+     verificaBaseImage(app)
      if not hasBaseImage:
         messagebox.showerror("showerror", "Abra uma região de interesse primeiro")
      else:
@@ -44,19 +47,20 @@ def pathSave():
 
 def pathRoi():
     if enteredImage:
-        roi = getRoi(filepath)
-        global hasBaseImage, baseImage
+        global hasBaseImage
         hasBaseImage = True
-        baseImage = roi
         if not changeZoom:
             Zoom(filepath, group1, image=roi, flag=True)
         else:
-            result=cv2.imwrite('temp.png', baseImage)
+            base=cv2.read('temp.png')
+            global app
             app = MainWindow(group1, 'temp.png')
     else:
         messagebox.showerror("showerror", "Abra uma imagem primeiro")
 
 def pathResize():
+    global app
+    verificaBaseImage(app)
     if not hasBaseImage:
         messagebox.showerror("showerror", "Abra uma região de interesse primeiro")
     else:
@@ -72,6 +76,8 @@ def pathResize():
                 app = MainWindow(group1, 'temp.png')
 
 def pathQuantize():
+    global app
+    verificaBaseImage(app)
     if not hasBaseImage:
         messagebox.showerror("showerror", "Abra uma região de interesse primeiro")
     else:
@@ -89,6 +95,8 @@ def pathQuantize():
                 plt.show()
          
 def pathEqualize(value):
+    global app
+    verificaBaseImage(app)
     if not hasBaseImage:
         messagebox.showerror("showerror", "Abra uma região de interesse primeiro")
     else:
@@ -121,6 +129,7 @@ def pathZoom():
             Zoom(filepath, group1)
     else:
         changeZoom = True
+        global app
         if not hasBaseImage and not enteredImage:
             messagebox.showerror("showerror", "Abra uma imagem primeiro")
         elif hasBaseImage:
@@ -131,18 +140,28 @@ def pathZoom():
 
 def pathSair():
     master_window.destroy()
-    temp = cv2.imread('temp.png')
     try:
+        temp = cv2.imread('temp.png')
         if temp != None:
             os.remove('temp.png')
     except:
         print('A imagem temporaria não foi apagada')
+
+
+def verificaBaseImage(app):
+    if app.canvas.verifica:
+        global hasBaseImage, baseImage
+        hasBaseImage = True
+        baseImage = cv2.imread('temp.png')
+        app.canvas.verifica = False
+
 
 filepath = 'KMabWEXvea4P6QSXqDM6.png'
 baseImage = cv2.imread('KMabWEXvea4P6QSXqDM6.png', cv2.IMREAD_UNCHANGED)
 enteredImage = False
 hasBaseImage = False
 changeZoom = True
+app = None
 
 master_window = tk.Tk()
 master_window.title("Menu")
